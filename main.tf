@@ -34,7 +34,7 @@ resource "aws_security_group" "web" {
   # Règles en ligne : Terraform gère le Security Group en entier,
   # une règle ajoutée à la main apparaît comme une dérive au plan
   ingress {
-    description     = "HTTP depuis l'ALB uniquement"
+    description     = "HTTP depuis ALB uniquement"
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
