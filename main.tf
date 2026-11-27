@@ -30,20 +30,24 @@ resource "aws_security_group" "web" {
   name        = "${local.name}-web"
   description = "Instances web ${local.name}"
   vpc_id      = var.vpc_id
-}
 
-resource "aws_vpc_security_group_ingress_rule" "web_from_alb" {
-  security_group_id            = aws_security_group.web.id
-  referenced_security_group_id = aws_security_group.alb.id
-  from_port                    = 80
-  to_port                      = 80
-  ip_protocol                  = "tcp"
-}
+  # Règles en ligne : Terraform gère le Security Group en entier,
+  # une règle ajoutée à la main apparaît comme une dérive au plan
+  ingress {
+    description     = "HTTP depuis l'ALB uniquement"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
 
-resource "aws_vpc_security_group_egress_rule" "web_all" {
-  security_group_id = aws_security_group.web.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
+  egress {
+    description = "Sortie vers Internet (paquets, Parameter Store)"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 resource "aws_launch_template" "web" {
