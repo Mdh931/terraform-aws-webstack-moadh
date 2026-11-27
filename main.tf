@@ -10,6 +10,8 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
+  #checkov:skip=CKV_AWS_260:ALB public, le site doit etre joignable depuis Internet
+  description       = "HTTP public vers ALB"
   security_group_id = aws_security_group.alb.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 80
@@ -18,6 +20,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_http" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_to_web" {
+  description                  = "ALB vers instances web"
   security_group_id            = aws_security_group.alb.id
   referenced_security_group_id = aws_security_group.web.id
   from_port                    = 80
@@ -42,10 +45,10 @@ resource "aws_security_group" "web" {
   }
 
   egress {
-    description = "Sortie vers Internet (paquets, Parameter Store)"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS sortant (paquets, Parameter Store)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -99,6 +102,10 @@ resource "aws_launch_template" "web" {
 }
 
 resource "aws_lb" "web" {
+  #checkov:skip=CKV_AWS_150:infrastructure detruite a chaque fin de session du lab
+  #checkov:skip=CKV_AWS_91:logs d acces impossibles, aws_s3_bucket interdit dans le lab
+  #checkov:skip=CKV2_AWS_28:WAF hors perimetre du socle (cout)
+  #checkov:skip=CKV2_AWS_20:pas de domaine dans le lab, HTTPS est une extension
   name                       = "${local.name}-alb"
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb.id]
@@ -107,6 +114,7 @@ resource "aws_lb" "web" {
 }
 
 resource "aws_lb_target_group" "web" {
+  #checkov:skip=CKV_AWS_378:trafic ALB vers instances interne au VPC
   name                 = "${local.name}-tg"
   port                 = 80
   protocol             = "HTTP"
@@ -123,6 +131,8 @@ resource "aws_lb_target_group" "web" {
 }
 
 resource "aws_lb_listener" "http" {
+  #checkov:skip=CKV_AWS_2:pas de domaine dans le lab, HTTPS est une extension
+  #checkov:skip=CKV_AWS_103:pas de listener TLS sans HTTPS
   load_balancer_arn = aws_lb.web.arn
   port              = 80
   protocol          = "HTTP"
