@@ -130,7 +130,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_autoscaling_group" "web" {
-  name                      = "${local.name}-asg"
+  name                      = "${local.name}-asg-v${aws_launch_template.web.latest_version}"
   min_size                  = var.min_size
   max_size                  = var.max_size
   desired_capacity          = var.desired_capacity
@@ -138,18 +138,16 @@ resource "aws_autoscaling_group" "web" {
   health_check_type         = "ELB"
   health_check_grace_period = 180
   target_group_arns         = [aws_lb_target_group.web.arn]
+  wait_for_elb_capacity     = var.min_size
 
   launch_template {
     id      = aws_launch_template.web.id
     version = aws_launch_template.web.latest_version
   }
 
-  # Remplace progressivement les instances quand le Launch Template change
-  instance_refresh {
-    strategy = "Rolling"
-    preferences {
-      min_healthy_percentage = 50
-    }
+
+  lifecycle {
+    create_before_destroy = true
   }
 
   tag {
